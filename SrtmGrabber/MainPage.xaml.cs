@@ -22,7 +22,7 @@ public partial class MainPage : ContentPage
 	private void ValidateEntry(Entry entry)
 	{
 		string text = entry.Text?.Trim() ?? "";
-		bool isValid = !string.IsNullOrEmpty(text) && IsValidFormat(text);
+		bool isValid = !string.IsNullOrEmpty(text) && IsValidFormat(text, entry);
 		
 		// Get the corresponding border
 		Border border = GetBorderForEntry(entry);
@@ -43,20 +43,35 @@ public partial class MainPage : ContentPage
 		return null;
 	}
 
-	private bool IsValidFormat(string text)
+	private bool IsValidFormat(string text, Entry entry)
 	{
-		// Check for format like "110 S", "55 E", "107.5 S"
 		if (string.IsNullOrWhiteSpace(text)) return false;
 
 		string[] parts = text.Split(' ');
 		if (parts.Length != 2) return false;
 
 		// Validate number part
-		if (!double.TryParse(parts[0], out _)) return false;
+		if (!double.TryParse(parts[0], out double value)) return false;
 
-		// Validate direction part
+		// Validate direction and value range based on entry type
 		string direction = parts[1].ToUpper();
-		return direction == "N" || direction == "S" || direction == "E" || direction == "W";
+		bool isLatitude = entry == LatMinEntry || entry == LatMaxEntry || entry == CenterLatEntry;
+		bool isLongitude = entry == LongMinEntry || entry == LongMaxEntry || entry == CenterLongEntry;
+
+		if (isLatitude)
+		{
+			// For latitude: only N/S allowed, value must be between 0 and 90
+			if (direction != "N" && direction != "S") return false;
+			return value >= 0 && value <= 90;
+		}
+		else if (isLongitude)
+		{
+			// For longitude: only E/W allowed, value must be between 0 and 180
+			if (direction != "E" && direction != "W") return false;
+			return value >= 0 && value <= 180;
+		}
+
+		return false;
 	}
 
 	private void UpdateErrorMessage()
