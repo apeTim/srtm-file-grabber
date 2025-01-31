@@ -42,6 +42,11 @@ public partial class MainPage : ContentPage
 		UpdateErrorMessage();
 	}
 
+	private void OnDirectionChanged(object sender, EventArgs e)
+	{
+		UpdateErrorMessage();
+	}
+
 	private void ValidateEntry(Entry entry)
 	{
 		string text = entry.Text?.Trim() ?? "";
@@ -66,27 +71,21 @@ public partial class MainPage : ContentPage
 	{
 		if (string.IsNullOrWhiteSpace(text)) return false;
 
-		string[] parts = text.Split(' ');
-		if (parts.Length != 2) return false;
-
 		// Validate number part
-		if (!double.TryParse(parts[0], out double value)) return false;
+		if (!double.TryParse(text, out double value)) return false;
 
-		// Validate direction and value range based on entry type
-		string direction = parts[1].ToUpper();
+		// Validate value range based on entry type
 		bool isLatitude = entry == CenterLatEntry;
 		bool isLongitude = entry == CenterLongEntry;
 
 		if (isLatitude)
 		{
-			// For latitude: only N/S allowed, value must be between 0 and 90
-			if (direction != "N" && direction != "S") return false;
+			// For latitude: value must be between 0 and 90
 			return value >= 0 && value <= 90;
 		}
 		else if (isLongitude)
 		{
-			// For longitude: only E/W allowed, value must be between 0 and 180
-			if (direction != "E" && direction != "W") return false;
+			// For longitude: value must be between 0 and 180
 			return value >= 0 && value <= 180;
 		}
 
@@ -132,8 +131,16 @@ public partial class MainPage : ContentPage
 		}
 
 		// Parse coordinates
-		ParseCoordinate(CenterLatEntry.Text, out double lat, out string latDir);
-		ParseCoordinate(CenterLongEntry.Text, out double lon, out string lonDir);
+		if (!double.TryParse(CenterLatEntry.Text, out double lat) || 
+			!double.TryParse(CenterLongEntry.Text, out double lon))
+		{
+			await DisplayAlert("Error", "Invalid coordinate format", "OK");
+			return;
+		}
+
+		// Get directions from pickers
+		string latDir = LatDirectionPicker.SelectedItem as string;
+		string lonDir = LongDirectionPicker.SelectedItem as string;
 
 		// Convert to standard format (negative for S and W)
 		lat = latDir == "S" ? -lat : lat;
@@ -162,13 +169,6 @@ public partial class MainPage : ContentPage
 		}
 
 		await DisplayAlert("Available SRTM Tiles", message, "OK");
-	}
-
-	private void ParseCoordinate(string text, out double value, out string direction)
-	{
-		var parts = text.Split(' ');
-		value = double.Parse(parts[0]);
-		direction = parts[1].ToUpper();
 	}
 }
 

@@ -38,7 +38,9 @@
                            FontSize="16" />
                     <Grid ColumnSpacing="10" RowSpacing="10">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -51,34 +53,67 @@
                                Grid.Row="0" 
                                TextColor="White"
                                VerticalOptions="Center" />
+                        <Label Text="Longitude:" 
+                               Grid.Column="2" 
+                               Grid.Row="0" 
+                               TextColor="White"
+                               VerticalOptions="Center" />
+
                         <Border x:Name="CenterLatBorder"
                                 Grid.Column="0" 
                                 Grid.Row="1"
                                 Stroke="{StaticResource Gray500}"
                                 StrokeThickness="1">
                             <Entry x:Name="CenterLatEntry" 
-                                   Placeholder="107.5 S" 
+                                   Placeholder="107.5" 
                                    TextColor="White"
                                    PlaceholderColor="{StaticResource Gray500}"
-                                   TextChanged="OnEntryTextChanged" />
+                                   TextChanged="OnEntryTextChanged"
+                                   Keyboard="Numeric" />
                         </Border>
 
-                        <Label Text="Longitude:" 
-                               Grid.Column="1" 
-                               Grid.Row="0" 
-                               TextColor="White"
-                               VerticalOptions="Center" />
+                        <Picker x:Name="LatDirectionPicker"
+                                Grid.Column="1"
+                                Grid.Row="1"
+                                TextColor="White"
+                                BackgroundColor="{StaticResource CustomGray}"
+                                SelectedIndexChanged="OnDirectionChanged">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>N</x:String>
+                                    <x:String>S</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                            <Picker.SelectedIndex>1</Picker.SelectedIndex>
+                        </Picker>
+
                         <Border x:Name="CenterLongBorder"
-                                Grid.Column="1" 
+                                Grid.Column="2" 
                                 Grid.Row="1"
                                 Stroke="{StaticResource Gray500}"
                                 StrokeThickness="1">
                             <Entry x:Name="CenterLongEntry" 
-                                   Placeholder="57.5 E" 
+                                   Placeholder="57.5" 
                                    TextColor="White"
                                    PlaceholderColor="{StaticResource Gray500}"
-                                   TextChanged="OnEntryTextChanged" />
+                                   TextChanged="OnEntryTextChanged"
+                                   Keyboard="Numeric" />
                         </Border>
+
+                        <Picker x:Name="LongDirectionPicker"
+                                Grid.Column="3"
+                                Grid.Row="1"
+                                TextColor="White"
+                                BackgroundColor="{StaticResource CustomGray}"
+                                SelectedIndexChanged="OnDirectionChanged">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>E</x:String>
+                                    <x:String>W</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                            <Picker.SelectedIndex>0</Picker.SelectedIndex>
+                        </Picker>
                     </Grid>
                 </VerticalStackLayout>
             </Frame>
