@@ -1,13 +1,36 @@
-﻿namespace SrtmGrabber;
+﻿using SrtmGrabber.Models;
+using SrtmGrabber.Services;
+
+namespace SrtmGrabber;
 
 public partial class MainPage : ContentPage
 {
 	private readonly Color _errorColor = Colors.Tomato;
 	private readonly Color _normalColor = Colors.Gray;
+	private readonly SrtmDataService _srtmDataService;
+	private List<SrtmFeature> _srtmFeatures;
 
-	public MainPage()
+	public MainPage(SrtmDataService srtmDataService)
 	{
 		InitializeComponent();
+		_srtmDataService = srtmDataService;
+		LoadSrtmDataAsync();
+	}
+
+	private async Task LoadSrtmDataAsync()
+	{
+		try
+		{
+			_srtmFeatures = await _srtmDataService.GetSrtmFeaturesAsync();
+			System.Diagnostics.Debug.WriteLine($"Successfully loaded {_srtmFeatures.Count} SRTM features");
+			FileCountLabel.Text = $"{_srtmFeatures.Count} SRTM tiles available";
+		}
+		catch (Exception ex)
+		{
+			await DisplayAlert("Error", "Failed to load SRTM data. Please check your internet connection and try again.", "OK");
+			System.Diagnostics.Debug.WriteLine($"Error loading SRTM data: {ex.Message}");
+			FileCountLabel.Text = "Failed to load SRTM files";
+		}
 	}
 
 	private void OnEntryTextChanged(object sender, TextChangedEventArgs e)
@@ -87,6 +110,16 @@ public partial class MainPage : ContentPage
 
 	private async void OnDownloadClicked(object sender, EventArgs e)
 	{
+		if (_srtmFeatures == null)
+		{
+			await LoadSrtmDataAsync();
+			if (_srtmFeatures == null)
+			{
+				await DisplayAlert("Error", "SRTM data is not available. Please check your internet connection and try again.", "OK");
+				return;
+			}
+		}
+
 		var entries = new[] { LatMinEntry, LatMaxEntry, LongMinEntry, LongMaxEntry, CenterLatEntry, CenterLongEntry };
 		
 		// Validate all entries
@@ -102,13 +135,41 @@ public partial class MainPage : ContentPage
 			return; // Don't proceed with download if there are errors
 		}
 
-		// If all valid, proceed with the download
-		string message = $"Coordinates entered:\n" +
-						$"Latitude: {LatMinEntry.Text} to {LatMaxEntry.Text}\n" +
-						$"Longitude: {LongMinEntry.Text} to {LongMaxEntry.Text}\n" +
-						$"Center Point: {CenterLatEntry.Text}, {CenterLongEntry.Text}";
+		// Parse coordinates
+		ParseCoordinate(LatMinEntry.Text, out double latMin, out string latMinDir);
+		ParseCoordinate(LatMaxEntry.Text, out double latMax, out string latMaxDir);
+		ParseCoordinate(LongMinEntry.Text, out double lonMin, out string lonMinDir);
+		ParseCoordinate(LongMaxEntry.Text, out double lonMax, out string lonMaxDir);
 
-		await DisplayAlert("Download Request", message, "OK");
+		// Convert to standard format (negative for S and W)
+		latMin = latMinDir == "S" ? -latMin : latMin;
+		latMax = latMaxDir == "S" ? -latMax : latMax;
+		lonMin = lonMinDir == "W" ? -lonMin : lonMin;
+		lonMax = lonMaxDir == "W" ? -lonMax : lonMax;
+
+		// Get matching features
+		var matchingFeatures = _srtmDataService.GetFeaturesInBounds(latMin, latMax, lonMin, lonMax);
+
+		if (!matchingFeatures.Any())
+		{
+			await DisplayAlert("No Data", "No SRTM data tiles found for the specified coordinates.", "OK");
+			return;
+		}
+
+		string message = $"Found {matchingFeatures.Count} SRTM tiles:\n";
+		foreach (var feature in matchingFeatures)
+		{
+			message += $"\n• Tile {feature.Properties.PolyName}: {feature.Properties.SuffName}";
+		}
+
+		await DisplayAlert("Available SRTM Tiles", message, "OK");
+	}
+
+	private void ParseCoordinate(string text, out double value, out string direction)
+	{
+		var parts = text.Split(' ');
+		value = double.Parse(parts[0]);
+		direction = parts[1].ToUpper();
 	}
 }
 
