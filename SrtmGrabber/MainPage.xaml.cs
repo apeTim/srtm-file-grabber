@@ -57,10 +57,6 @@ public partial class MainPage : ContentPage
 
 	private Border GetBorderForEntry(Entry entry)
 	{
-		if (entry == LatMinEntry) return LatMinBorder;
-		if (entry == LatMaxEntry) return LatMaxBorder;
-		if (entry == LongMinEntry) return LongMinBorder;
-		if (entry == LongMaxEntry) return LongMaxBorder;
 		if (entry == CenterLatEntry) return CenterLatBorder;
 		if (entry == CenterLongEntry) return CenterLongBorder;
 		return null;
@@ -78,8 +74,8 @@ public partial class MainPage : ContentPage
 
 		// Validate direction and value range based on entry type
 		string direction = parts[1].ToUpper();
-		bool isLatitude = entry == LatMinEntry || entry == LatMaxEntry || entry == CenterLatEntry;
-		bool isLongitude = entry == LongMinEntry || entry == LongMaxEntry || entry == CenterLongEntry;
+		bool isLatitude = entry == CenterLatEntry;
+		bool isLongitude = entry == CenterLongEntry;
 
 		if (isLatitude)
 		{
@@ -99,8 +95,8 @@ public partial class MainPage : ContentPage
 
 	private void UpdateErrorMessage()
 	{
-		var entries = new[] { LatMinEntry, LatMaxEntry, LongMinEntry, LongMaxEntry, CenterLatEntry, CenterLongEntry };
-		var borders = new[] { LatMinBorder, LatMaxBorder, LongMinBorder, LongMaxBorder, CenterLatBorder, CenterLongBorder };
+		var entries = new[] { CenterLatEntry, CenterLongEntry };
+		var borders = new[] { CenterLatBorder, CenterLongBorder };
 		
 		bool hasError = entries.Any(entry => string.IsNullOrEmpty(entry.Text)) || 
 					   borders.Any(border => border.Stroke is SolidColorBrush brush && brush.Color == _errorColor);
@@ -120,7 +116,7 @@ public partial class MainPage : ContentPage
 			}
 		}
 
-		var entries = new[] { LatMinEntry, LatMaxEntry, LongMinEntry, LongMaxEntry, CenterLatEntry, CenterLongEntry };
+		var entries = new[] { CenterLatEntry, CenterLongEntry };
 		
 		// Validate all entries
 		foreach (var entry in entries)
@@ -136,16 +132,19 @@ public partial class MainPage : ContentPage
 		}
 
 		// Parse coordinates
-		ParseCoordinate(LatMinEntry.Text, out double latMin, out string latMinDir);
-		ParseCoordinate(LatMaxEntry.Text, out double latMax, out string latMaxDir);
-		ParseCoordinate(LongMinEntry.Text, out double lonMin, out string lonMinDir);
-		ParseCoordinate(LongMaxEntry.Text, out double lonMax, out string lonMaxDir);
+		ParseCoordinate(CenterLatEntry.Text, out double lat, out string latDir);
+		ParseCoordinate(CenterLongEntry.Text, out double lon, out string lonDir);
 
 		// Convert to standard format (negative for S and W)
-		latMin = latMinDir == "S" ? -latMin : latMin;
-		latMax = latMaxDir == "S" ? -latMax : latMax;
-		lonMin = lonMinDir == "W" ? -lonMin : lonMin;
-		lonMax = lonMaxDir == "W" ? -lonMax : lonMax;
+		lat = latDir == "S" ? -lat : lat;
+		lon = lonDir == "W" ? -lon : lon;
+
+		// Add a small buffer around the point to find matching tiles
+		double buffer = 0.5; // Half a degree buffer
+		double latMin = lat - buffer;
+		double latMax = lat + buffer;
+		double lonMin = lon - buffer;
+		double lonMax = lon + buffer;
 
 		// Get matching features
 		var matchingFeatures = _srtmDataService.GetFeaturesInBounds(latMin, latMax, lonMin, lonMax);
