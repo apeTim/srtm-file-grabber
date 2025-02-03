@@ -14,7 +14,8 @@ public partial class MainPage : ContentPage
 	private readonly SrtmDataService _srtmDataService;
 	private List<SrtmFeature> _srtmFeatures;
 	private readonly HttpClient _httpClient;
-	private const string SrtmBaseUrl = "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/";
+	private const string SrtmBasePath = "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/";
+	private string SrtmBaseUrl => $"{SrtmBasePath}{(GeoTiffRadioButton.IsChecked ? "TIFF" : "ASCII")}/";
 	private Pin? _currentPin;
 
 	public MainPage(SrtmDataService srtmDataService)
@@ -22,6 +23,9 @@ public partial class MainPage : ContentPage
 		InitializeComponent();
 		_srtmDataService = srtmDataService;
 		_httpClient = new HttpClient();
+
+		// Set default radio button state
+		GeoTiffRadioButton.IsChecked = true;
 
 		// Initialize direction pickers
 		var latDirections = new[] { "N", "S" };
@@ -88,7 +92,7 @@ public partial class MainPage : ContentPage
 		CenterLatEntry.Text = Math.Abs(latitude).ToString("F6");
 
 		// Update longitude
-		LongDirectionPicker.SelectedItem = longitude >= 0 ? "E" : "W";
+		LongDirectionPicker.SelectedItem = longitude >= 0 ? "W" : "E";
 		CenterLongEntry.Text = Math.Abs(longitude).ToString("F6");
 
 		// Validate the new entries
@@ -97,11 +101,12 @@ public partial class MainPage : ContentPage
 		UpdateErrorMessage();
 	}
 
-	private async Task DownloadSrtmFileAsync(string suffName, string polyName)
+	private async Task DownloadSrtmFileAsync(string suffName)
 	{
 		try
 		{
-			var fileName = $"srtm_{polyName}.zip";
+			// Remove leading underscore if present
+			string fileName = suffName.StartsWith("_") ? suffName[1..] : suffName;
 			var downloadUrl = $"{SrtmBaseUrl}{fileName}";
 			var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
 
@@ -326,7 +331,7 @@ public partial class MainPage : ContentPage
 
 		if (await DisplayAlert("SRTM Tile Found", message + "\n\nDo you want to download this tile?", "Yes", "No"))
 		{
-			await DownloadSrtmFileAsync(containingSquare.Properties.SuffName, containingSquare.Properties.PolyName);
+			await DownloadSrtmFileAsync(containingSquare.Properties.SuffName);
 		}
 	}
 }
