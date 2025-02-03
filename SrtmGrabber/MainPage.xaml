@@ -77,15 +77,7 @@
                                 Grid.Row="1"
                                 TextColor="White"
                                 BackgroundColor="{StaticResource CustomGray}"
-                                SelectedIndexChanged="OnDirectionChanged">
-                            <Picker.ItemsSource>
-                                <x:Array Type="{x:Type x:String}">
-                                    <x:String>N</x:String>
-                                    <x:String>S</x:String>
-                                </x:Array>
-                            </Picker.ItemsSource>
-                            <Picker.SelectedIndex>1</Picker.SelectedIndex>
-                        </Picker>
+                                SelectedIndexChanged="OnDirectionChanged" />
 
                         <Border x:Name="CenterLongBorder"
                                 Grid.Column="2" 
@@ -105,15 +97,7 @@
                                 Grid.Row="1"
                                 TextColor="White"
                                 BackgroundColor="{StaticResource CustomGray}"
-                                SelectedIndexChanged="OnDirectionChanged">
-                            <Picker.ItemsSource>
-                                <x:Array Type="{x:Type x:String}">
-                                    <x:String>E</x:String>
-                                    <x:String>W</x:String>
-                                </x:Array>
-                            </Picker.ItemsSource>
-                            <Picker.SelectedIndex>0</Picker.SelectedIndex>
-                        </Picker>
+                                SelectedIndexChanged="OnDirectionChanged" />
                     </Grid>
                 </VerticalStackLayout>
             </Frame>

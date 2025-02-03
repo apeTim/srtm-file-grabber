@@ -14,6 +14,17 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
 		_srtmDataService = srtmDataService;
+
+		// Initialize direction pickers
+		var latDirections = new[] { "N", "S" };
+		var lonDirections = new[] { "W", "E" };
+
+		LatDirectionPicker.ItemsSource = latDirections;
+		LatDirectionPicker.SelectedItem = latDirections[0]; // Default to N
+
+		LongDirectionPicker.ItemsSource = lonDirections;
+		LongDirectionPicker.SelectedItem = lonDirections[0]; // Default to W
+
 		LoadSrtmDataAsync();
 	}
 
@@ -44,6 +55,11 @@ public partial class MainPage : ContentPage
 
 	private void OnDirectionChanged(object sender, EventArgs e)
 	{
+		if (sender is Picker picker)
+		{
+			// Update the selected item to match the current selection
+			picker.SelectedItem = picker.ItemsSource[picker.SelectedIndex];
+		}
 		UpdateErrorMessage();
 	}
 
@@ -142,33 +158,33 @@ public partial class MainPage : ContentPage
 		string latDir = LatDirectionPicker.SelectedItem as string;
 		string lonDir = LongDirectionPicker.SelectedItem as string;
 
-		// Convert to standard format (negative for S and W)
+		// Convert to standard format (negative for S and positive for N)
 		lat = latDir == "S" ? -lat : lat;
-		lon = lonDir == "W" ? -lon : lon;
+		// Convert to standard format (negative for E and positive for W)
+		lon = lonDir == "E" ? -lon : lon;
 
-		// Add a small buffer around the point to find matching tiles
-		double buffer = 0.5; // Half a degree buffer
-		double latMin = lat - buffer;
-		double latMax = lat + buffer;
-		double lonMin = lon - buffer;
-		double lonMax = lon + buffer;
+		System.Diagnostics.Debug.WriteLine($"Searching for point: {lat}, {lon}");
 
-		// Get matching features
-		var matchingFeatures = _srtmDataService.GetFeaturesInBounds(latMin, latMax, lonMin, lonMax);
+		// Find the square that contains this point
+		var containingSquare = _srtmFeatures.FirstOrDefault(f => 
+			lat >= f.Properties.ExtMinY && lat <= f.Properties.ExtMaxY &&
+			lon >= f.Properties.ExtMinX && lon <= f.Properties.ExtMaxX);
 
-		if (!matchingFeatures.Any())
+		if (containingSquare == null)
 		{
-			await DisplayAlert("No Data", "No SRTM data tiles found for the specified coordinates.", "OK");
+			string noDataMessage = $"No SRTM data tile found for coordinates:\n" +
+								 $"{Math.Abs(lat)}°{latDir}, {Math.Abs(lon)}°{lonDir}";
+			await DisplayAlert("No Data", noDataMessage, "OK");
 			return;
 		}
 
-		string message = $"Found {matchingFeatures.Count} SRTM tiles:\n";
-		foreach (var feature in matchingFeatures)
-		{
-			message += $"\n• Tile {feature.Properties.PolyName}: {feature.Properties.SuffName}";
-		}
+		string message = $"Search coordinates: {Math.Abs(lat)}°{latDir}, {Math.Abs(lon)}°{lonDir}\n\n" +
+						$"Found SRTM tile: {containingSquare.Properties.SuffName}\n" +
+						$"Tile boundaries:\n" +
+						$"Latitude: {containingSquare.Properties.ExtMinY}° to {containingSquare.Properties.ExtMaxY}°\n" +
+						$"Longitude: {containingSquare.Properties.ExtMinX}° to {containingSquare.Properties.ExtMaxX}°";
 
-		await DisplayAlert("Available SRTM Tiles", message, "OK");
+		await DisplayAlert("SRTM Tile Found", message, "OK");
 	}
 }
 
