@@ -16,7 +16,7 @@
             Spacing="20">
             
             <Label
-                Text="SRTM File Coordinates"
+                Text="SRTM File Grabber"
                 Style="{StaticResource Headline}"
                 TextColor="White"
                 SemanticProperties.HeadingLevel="Level1"
@@ -109,14 +109,25 @@
                    IsVisible="false"
                    HorizontalOptions="Center" />
 
-            <Button
-                x:Name="DownloadButton"
-                Text="Download SRTM File"
-                SemanticProperties.Hint="Downloads the SRTM file for the specified coordinates"
-                Clicked="OnDownloadClicked"
-                BackgroundColor="{StaticResource Primary}"
-                TextColor="White"
-                HorizontalOptions="Fill" />
+            <!-- Download Button with Spinner -->
+            <Grid>
+                <Button
+                    x:Name="DownloadButton"
+                    Text="Download SRTM File"
+                    SemanticProperties.Hint="Downloads the SRTM file for the specified coordinates"
+                    Clicked="OnDownloadClicked"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    HorizontalOptions="Fill" />
+                    
+                <ActivityIndicator 
+                    x:Name="DownloadSpinner"
+                    IsRunning="False"
+                    IsVisible="False"
+                    Color="White"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center" />
+            </Grid>
 
         </VerticalStackLayout>
     </ScrollView>

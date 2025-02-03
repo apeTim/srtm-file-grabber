@@ -1,5 +1,7 @@
 ﻿using SrtmGrabber.Models;
 using SrtmGrabber.Services;
+using System.Net.Http;
+using System.IO;
 
 namespace SrtmGrabber;
 
@@ -9,11 +11,14 @@ public partial class MainPage : ContentPage
 	private readonly Color _normalColor = Colors.Gray;
 	private readonly SrtmDataService _srtmDataService;
 	private List<SrtmFeature> _srtmFeatures;
+	private readonly HttpClient _httpClient;
+	private const string SrtmBaseUrl = "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/";
 
 	public MainPage(SrtmDataService srtmDataService)
 	{
 		InitializeComponent();
 		_srtmDataService = srtmDataService;
+		_httpClient = new HttpClient();
 
 		// Initialize direction pickers
 		var latDirections = new[] { "N", "S" };
@@ -26,6 +31,47 @@ public partial class MainPage : ContentPage
 		LongDirectionPicker.SelectedItem = lonDirections[0]; // Default to W
 
 		LoadSrtmDataAsync();
+	}
+
+	private async Task DownloadSrtmFileAsync(string suffName, string polyName)
+	{
+		try
+		{
+			var fileName = $"srtm_{polyName}.zip";
+			var downloadUrl = $"{SrtmBaseUrl}{fileName}";
+			var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+
+			// Start download animation
+			DownloadButton.Text = "";
+			DownloadButton.IsEnabled = false;
+			DownloadSpinner.IsVisible = true;
+			DownloadSpinner.IsRunning = true;
+			
+			var response = await _httpClient.GetAsync(downloadUrl);
+			if (!response.IsSuccessStatusCode)
+			{
+				throw new Exception($"Failed to download file. Status code: {response.StatusCode}");
+			}
+
+			using (var fileStream = File.Create(localPath))
+			{
+				await response.Content.CopyToAsync(fileStream);
+			}
+
+			await DisplayAlert("Success", $"SRTM file saved successfully!\nLocation: {localPath}", "OK");
+		}
+		catch (Exception ex)
+		{
+			await DisplayAlert("Error", $"Failed to download SRTM file: {ex.Message}", "OK");
+		}
+		finally
+		{
+			// Reset button state
+			DownloadButton.Text = "Download SRTM File";
+			DownloadButton.IsEnabled = true;
+			DownloadSpinner.IsVisible = false;
+			DownloadSpinner.IsRunning = false;
+		}
 	}
 
 	private async Task LoadSrtmDataAsync()
@@ -184,7 +230,10 @@ public partial class MainPage : ContentPage
 						$"Latitude: {containingSquare.Properties.ExtMinY}° to {containingSquare.Properties.ExtMaxY}°\n" +
 						$"Longitude: {containingSquare.Properties.ExtMinX}° to {containingSquare.Properties.ExtMaxX}°";
 
-		await DisplayAlert("SRTM Tile Found", message, "OK");
+		if (await DisplayAlert("SRTM Tile Found", message + "\n\nDo you want to download this tile?", "Yes", "No"))
+		{
+			await DownloadSrtmFileAsync(containingSquare.Properties.SuffName, containingSquare.Properties.PolyName);
+		}
 	}
 }
 
