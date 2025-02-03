@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="http://schemas.microsoft.com/dotnet/2021/maui/maps"
              x:Class="SrtmGrabber.MainPage"
              BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
 
@@ -28,6 +29,15 @@
                 TextColor="White"
                 HorizontalOptions="Center"
                 Margin="0,-10,0,0" />
+
+            <!-- Map for coordinate selection -->
+            <Frame Padding="0" BorderColor="Gray">
+                <maps:Map x:Name="CoordinateMap"
+                         HeightRequest="400"
+                         IsZoomEnabled="True"
+                         IsScrollEnabled="True"
+                         MapType="Hybrid" />
+            </Frame>
 
             <!-- Point Coordinates -->
             <Frame Padding="15" BorderColor="Gray" BackgroundColor="{StaticResource CustomGray}">

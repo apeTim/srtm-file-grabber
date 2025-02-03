@@ -2,6 +2,8 @@
 using SrtmGrabber.Services;
 using System.Net.Http;
 using System.IO;
+using Microsoft.Maui.Controls.Maps;
+using Microsoft.Maui.Maps;
 
 namespace SrtmGrabber;
 
@@ -13,6 +15,7 @@ public partial class MainPage : ContentPage
 	private List<SrtmFeature> _srtmFeatures;
 	private readonly HttpClient _httpClient;
 	private const string SrtmBaseUrl = "https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_5x5/TIFF/";
+	private Pin? _currentPin;
 
 	public MainPage(SrtmDataService srtmDataService)
 	{
@@ -30,7 +33,68 @@ public partial class MainPage : ContentPage
 		LongDirectionPicker.ItemsSource = lonDirections;
 		LongDirectionPicker.SelectedItem = lonDirections[0]; // Default to W
 
+		// Initialize map
+		InitializeMap();
+
 		LoadSrtmDataAsync();
+	}
+
+	private void InitializeMap()
+	{
+		try
+		{
+			// Set initial map position (center of the world)
+			var initialLocation = new Location(0, 0);
+			MapSpan mapSpan = new MapSpan(initialLocation, 90, 180);
+			CoordinateMap.MoveToRegion(mapSpan);
+
+			// Add tap gesture recognizer
+			CoordinateMap.MapClicked += OnMapClicked;
+		}
+		catch (Exception ex)
+		{
+			System.Diagnostics.Debug.WriteLine($"Error initializing map: {ex.Message}");
+		}
+	}
+
+	private void OnMapClicked(object sender, MapClickedEventArgs e)
+	{
+		var location = e.Location;
+		UpdateCoordinateFields(location.Latitude, location.Longitude);
+		
+		// Remove existing pin if any
+		if (_currentPin != null)
+		{
+			CoordinateMap.Pins.Remove(_currentPin);
+		}
+
+		// Add new pin
+		_currentPin = new Pin
+		{
+			Location = location,
+			Label = $"{Math.Abs(location.Latitude):F6}°{(location.Latitude >= 0 ? "N" : "S")}, {Math.Abs(location.Longitude):F6}°{(location.Longitude >= 0 ? "E" : "W")}",
+			Type = PinType.Generic
+		};
+		CoordinateMap.Pins.Add(_currentPin);
+
+		// Center the map on the selected location
+		CoordinateMap.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(100)));
+	}
+
+	private void UpdateCoordinateFields(double latitude, double longitude)
+	{
+		// Update latitude
+		LatDirectionPicker.SelectedItem = latitude >= 0 ? "N" : "S";
+		CenterLatEntry.Text = Math.Abs(latitude).ToString("F6");
+
+		// Update longitude
+		LongDirectionPicker.SelectedItem = longitude >= 0 ? "E" : "W";
+		CenterLongEntry.Text = Math.Abs(longitude).ToString("F6");
+
+		// Validate the new entries
+		ValidateEntry(CenterLatEntry);
+		ValidateEntry(CenterLongEntry);
+		UpdateErrorMessage();
 	}
 
 	private async Task DownloadSrtmFileAsync(string suffName, string polyName)
@@ -163,6 +227,36 @@ public partial class MainPage : ContentPage
 					   borders.Any(border => border.Stroke is SolidColorBrush brush && brush.Color == _errorColor);
 		
 		ErrorLabel.IsVisible = hasError;
+
+		// Update map pin if coordinates are valid
+		if (!hasError && 
+			double.TryParse(CenterLatEntry.Text, out double lat) && 
+			double.TryParse(CenterLongEntry.Text, out double lon))
+		{
+			// Convert coordinates based on direction
+			lat = LatDirectionPicker.SelectedItem as string == "S" ? -lat : lat;
+			lon = LongDirectionPicker.SelectedItem as string == "E" ? -lon : lon;
+
+			var location = new Location(lat, lon);
+
+			// Remove existing pin if any
+			if (_currentPin != null)
+			{
+				CoordinateMap.Pins.Remove(_currentPin);
+			}
+
+			// Add new pin
+			_currentPin = new Pin
+			{
+				Location = location,
+				Label = $"{Math.Abs(lat):F6}°{(lat >= 0 ? "N" : "S")}, {Math.Abs(lon):F6}°{(lon >= 0 ? "E" : "W")}",
+				Type = PinType.Generic
+			};
+			CoordinateMap.Pins.Add(_currentPin);
+
+			// Center the map on the selected location
+			CoordinateMap.MoveToRegion(MapSpan.FromCenterAndRadius(location, Distance.FromKilometers(100)));
+		}
 	}
 
 	private async void OnDownloadClicked(object sender, EventArgs e)
