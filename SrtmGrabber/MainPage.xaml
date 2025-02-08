@@ -30,8 +30,32 @@
                 HorizontalOptions="Center"
                 Margin="0,-10,0,0" />
 
+            <!-- Download Mode Selection -->
+            <Frame Padding="15" BorderColor="Gray" BackgroundColor="{StaticResource CustomGray}">
+                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                    <Label Text="Download Mode:" 
+                           TextColor="White"
+                           VerticalOptions="Center"/>
+                    <RadioButton x:Name="SinglePointRadioButton" 
+                               Content="Single Point" 
+                               GroupName="DownloadMode" 
+                               IsChecked="True"
+                               TextColor="White"
+                               VerticalOptions="Center"
+                               Margin="0,-10,0,-10"
+                               CheckedChanged="OnDownloadModeChanged"/>
+                    <RadioButton x:Name="AllPointsRadioButton" 
+                               Content="All Points" 
+                               GroupName="DownloadMode"
+                               TextColor="White"
+                               VerticalOptions="Center"
+                               Margin="0,-10,0,-10"
+                               CheckedChanged="OnDownloadModeChanged"/>
+                </HorizontalStackLayout>
+            </Frame>
+
             <!-- Map for coordinate selection -->
-            <Frame Padding="0" BorderColor="Gray">
+            <Frame x:Name="MapFrame" Padding="0" BorderColor="Gray">
                 <maps:Map x:Name="CoordinateMap"
                          HeightRequest="400"
                          IsZoomEnabled="True"
@@ -40,7 +64,7 @@
             </Frame>
 
             <!-- Point Coordinates -->
-            <Frame Padding="15" BorderColor="Gray" BackgroundColor="{StaticResource CustomGray}">
+            <Frame x:Name="CoordinatesFrame" Padding="15" BorderColor="Gray" BackgroundColor="{StaticResource CustomGray}">
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Point Coordinates" 
                            FontAttributes="Bold" 

@@ -275,6 +275,117 @@ public partial class MainPage : ContentPage
 		}
 	}
 
+	private void OnDownloadModeChanged(object sender, CheckedChangedEventArgs e)
+	{
+		bool isSinglePoint = SinglePointRadioButton.IsChecked;
+		
+		// Hide/show UI elements based on mode
+		MapFrame.IsVisible = isSinglePoint;
+		CoordinatesFrame.IsVisible = isSinglePoint;
+		ErrorLabel.IsVisible = isSinglePoint && ErrorLabel.IsVisible;
+
+		// Enable/disable inputs
+		CenterLatEntry.IsEnabled = isSinglePoint;
+		CenterLongEntry.IsEnabled = isSinglePoint;
+		LatDirectionPicker.IsEnabled = isSinglePoint;
+		LongDirectionPicker.IsEnabled = isSinglePoint;
+
+		// Update download button text based on mode
+		DownloadButton.Text = isSinglePoint ? "Download SRTM File" : "Download All SRTM Files";
+	}
+
+	private async Task DownloadAllSrtmFilesAsync()
+	{
+		try
+		{
+			if (_srtmFeatures == null || !_srtmFeatures.Any())
+			{
+				await DisplayAlert("Error", "No SRTM data available. Please check your internet connection and try again.", "OK");
+				return;
+			}
+
+			// Ask for confirmation
+			string message = $"This will download {_srtmFeatures.Count} SRTM tiles.\n" +
+							$"Required storage space: ~{_srtmFeatures.Count * 25}MB\n\n" +
+							"Do you want to continue?";
+			
+			if (!await DisplayAlert("Download All Tiles", message, "Yes", "No"))
+			{
+				return;
+			}
+
+			// Start download animation
+			DownloadButton.Text = "";
+			DownloadButton.IsEnabled = false;
+			DownloadSpinner.IsVisible = true;
+			DownloadSpinner.IsRunning = true;
+
+			// Create download directory
+			Directory.CreateDirectory(DownloadFolderEntry.Text);
+
+			// Download each file
+			int successCount = 0;
+			int failureCount = 0;
+			foreach (var feature in _srtmFeatures)
+			{
+				try
+				{
+					string fileName = feature.Properties.SuffName;
+					if (fileName.StartsWith("_")) fileName = fileName[1..];
+					
+					var downloadUrl = $"{SrtmBaseUrl}{fileName}";
+					var localPath = Path.Combine(DownloadFolderEntry.Text, fileName);
+
+					// Skip if file already exists
+					if (File.Exists(localPath))
+					{
+						successCount++;
+						continue;
+					}
+
+					var response = await _httpClient.GetAsync(downloadUrl);
+					if (!response.IsSuccessStatusCode)
+					{
+						failureCount++;
+						continue;
+					}
+
+					using (var fileStream = File.Create(localPath))
+					{
+						await response.Content.CopyToAsync(fileStream);
+					}
+					successCount++;
+				}
+				catch
+				{
+					failureCount++;
+				}
+
+				// Update download button text to show progress
+				DownloadButton.Text = $"Downloading... ({successCount + failureCount}/{_srtmFeatures.Count})";
+			}
+
+			string resultMessage = $"Download complete!\n\n" +
+								 $"Successfully downloaded: {successCount} files\n" +
+								 $"Failed to download: {failureCount} files\n\n" +
+								 $"Location: {DownloadFolderEntry.Text}";
+			
+			await DisplayAlert("Download Results", resultMessage, "OK");
+		}
+		catch (Exception ex)
+		{
+			await DisplayAlert("Error", $"Failed to download SRTM files: {ex.Message}", "OK");
+		}
+		finally
+		{
+			// Reset button state
+			DownloadButton.Text = "Download SRTM File";
+			DownloadButton.IsEnabled = true;
+			DownloadSpinner.IsVisible = false;
+			DownloadSpinner.IsRunning = false;
+		}
+	}
+
 	private async void OnDownloadClicked(object sender, EventArgs e)
 	{
 		if (_srtmFeatures == null)
@@ -285,6 +396,12 @@ public partial class MainPage : ContentPage
 				await DisplayAlert("Error", "SRTM data is not available. Please check your internet connection and try again.", "OK");
 				return;
 			}
+		}
+
+		if (AllPointsRadioButton.IsChecked)
+		{
+			await DownloadAllSrtmFilesAsync();
+			return;
 		}
 
 		var entries = new[] { CenterLatEntry, CenterLongEntry };
