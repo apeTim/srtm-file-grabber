@@ -149,6 +149,26 @@
                 </VerticalStackLayout>
             </Frame>
 
+            <!-- Download Folder -->
+            <Frame Padding="15" BorderColor="Gray" BackgroundColor="{StaticResource CustomGray}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Download Folder" 
+                           FontAttributes="Bold" 
+                           TextColor="White"
+                           FontSize="16" />
+                    <Border Stroke="{StaticResource Gray500}"
+                            StrokeThickness="1">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="5"/>
+                        </Border.StrokeShape>
+                        <Entry x:Name="DownloadFolderEntry"
+                               TextColor="White"
+                               PlaceholderColor="{StaticResource Gray500}"
+                               BackgroundColor="Transparent"/>
+                    </Border>
+                </VerticalStackLayout>
+            </Frame>
+
             <!-- Error Message -->
             <Label x:Name="ErrorLabel"
                    Text="Some fields are empty or incorrect"

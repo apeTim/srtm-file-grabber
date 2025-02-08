@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Hosting;
+using Microsoft.Maui.Hosting;
 using SrtmGrabber.Services;
+using CommunityToolkit.Maui;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 
@@ -13,6 +16,7 @@ public static class MauiProgram
 		builder
 			.UseMauiApp<App>()
 			.UseMauiMaps()
+			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -20,7 +24,7 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddSingleton<SrtmDataService>();
-		builder.Services.AddTransient<MainPage>();
+		builder.Services.AddSingleton<MainPage>();
 
 #if DEBUG
 		builder.Logging.AddDebug();

@@ -4,6 +4,8 @@ using System.Net.Http;
 using System.IO;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
+using CommunityToolkit.Maui.Storage;
+using Microsoft.Maui.Controls;
 
 namespace SrtmGrabber;
 
@@ -26,6 +28,12 @@ public partial class MainPage : ContentPage
 
 		// Set default radio button state
 		GeoTiffRadioButton.IsChecked = true;
+
+		// Set default download folder
+		DownloadFolderEntry.Text = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+			"SRTM Downloads"
+		);
 
 		// Initialize direction pickers
 		var latDirections = new[] { "N", "S" };
@@ -108,7 +116,10 @@ public partial class MainPage : ContentPage
 			// Remove leading underscore if present
 			string fileName = suffName.StartsWith("_") ? suffName[1..] : suffName;
 			var downloadUrl = $"{SrtmBaseUrl}{fileName}";
-			var localPath = Path.Combine(FileSystem.AppDataDirectory, fileName);
+
+			// Create download directory if it doesn't exist
+			Directory.CreateDirectory(DownloadFolderEntry.Text);
+			var localPath = Path.Combine(DownloadFolderEntry.Text, fileName);
 
 			// Start download animation
 			DownloadButton.Text = "";
