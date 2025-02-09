@@ -220,6 +220,19 @@
                     VerticalOptions="Center" />
             </Grid>
 
+            <!-- Download Progress -->
+            <VerticalStackLayout x:Name="ProgressContainer" IsVisible="False" Spacing="5">
+                <Label x:Name="ProgressLabel"
+                       Text="Downloading files..."
+                       TextColor="White"
+                       HorizontalOptions="Center" />
+                <ProgressBar x:Name="DownloadProgressBar"
+                            Progress="0"
+                            HeightRequest="10"
+                            BackgroundColor="{StaticResource Gray500}"
+                            ProgressColor="{StaticResource Primary}" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
     </ScrollView>
 

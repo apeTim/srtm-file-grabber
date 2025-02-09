@@ -294,6 +294,51 @@ public partial class MainPage : ContentPage
 		DownloadButton.Text = isSinglePoint ? "Download SRTM File" : "Download All SRTM Files";
 	}
 
+	private async Task<bool> DownloadFileWithRetryAsync(string downloadUrl, string localPath, int maxRetries = 3, int delaySeconds = 5)
+	{
+		for (int attempt = 1; attempt <= maxRetries; attempt++)
+		{
+			try
+			{
+				var response = await _httpClient.GetAsync(downloadUrl);
+				if (response.IsSuccessStatusCode)
+				{
+					using (var fileStream = File.Create(localPath))
+					{
+						await response.Content.CopyToAsync(fileStream);
+					}
+					return true;
+				}
+
+				if (attempt < maxRetries)
+				{
+					MainThread.BeginInvokeOnMainThread(() =>
+					{
+						ProgressLabel.Text = $"Download failed. Retrying in {delaySeconds} seconds... (Attempt {attempt}/{maxRetries})";
+					});
+					await Task.Delay(delaySeconds * 1000);
+				}
+			}
+			catch (Exception ex)
+			{
+				if (attempt < maxRetries)
+				{
+					MainThread.BeginInvokeOnMainThread(() =>
+					{
+						ProgressLabel.Text = $"Download error. Retrying in {delaySeconds} seconds... (Attempt {attempt}/{maxRetries})";
+					});
+					await Task.Delay(delaySeconds * 1000);
+				}
+				else
+				{
+					throw new Exception($"Failed after {maxRetries} attempts: {ex.Message}");
+				}
+			}
+		}
+
+		return false;
+	}
+
 	private async Task DownloadAllSrtmFilesAsync()
 	{
 		try
@@ -314,11 +359,13 @@ public partial class MainPage : ContentPage
 				return;
 			}
 
-			// Start download animation
+			// Start download animation and show progress
 			DownloadButton.Text = "";
 			DownloadButton.IsEnabled = false;
 			DownloadSpinner.IsVisible = true;
 			DownloadSpinner.IsRunning = true;
+			ProgressContainer.IsVisible = true;
+			DownloadProgressBar.Progress = 0;
 
 			// Create download directory
 			Directory.CreateDirectory(DownloadFolderEntry.Text);
@@ -326,6 +373,8 @@ public partial class MainPage : ContentPage
 			// Download each file
 			int successCount = 0;
 			int failureCount = 0;
+			int totalFiles = _srtmFeatures.Count;
+
 			foreach (var feature in _srtmFeatures)
 			{
 				try
@@ -340,29 +389,38 @@ public partial class MainPage : ContentPage
 					if (File.Exists(localPath))
 					{
 						successCount++;
+						UpdateDownloadProgress(successCount, failureCount, totalFiles);
 						continue;
 					}
 
-					var response = await _httpClient.GetAsync(downloadUrl);
-					if (!response.IsSuccessStatusCode)
+					bool downloadSuccess = await DownloadFileWithRetryAsync(downloadUrl, localPath);
+					if (downloadSuccess)
 					{
-						failureCount++;
-						continue;
+						successCount++;
+					}
+					else
+					{
+						// If download fails after all retries, stop the entire process
+						string errorMessage = $"Failed to download file {fileName} after multiple attempts.\n" +
+										   $"Successfully downloaded: {successCount} files\n" +
+										   $"Failed: {failureCount + 1} files\n\n" +
+										   "Download process stopped.";
+						await DisplayAlert("Download Error", errorMessage, "OK");
+						return;
 					}
 
-					using (var fileStream = File.Create(localPath))
-					{
-						await response.Content.CopyToAsync(fileStream);
-					}
-					successCount++;
+					UpdateDownloadProgress(successCount, failureCount, totalFiles);
 				}
-				catch
+				catch (Exception ex)
 				{
-					failureCount++;
+					// If any file fails to download, stop the entire process
+					string errorMessage = $"Error downloading file: {ex.Message}\n\n" +
+									   $"Successfully downloaded: {successCount} files\n" +
+									   $"Failed: {failureCount + 1} files\n\n" +
+									   "Download process stopped.";
+					await DisplayAlert("Download Error", errorMessage, "OK");
+					return;
 				}
-
-				// Update download button text to show progress
-				DownloadButton.Text = $"Downloading... ({successCount + failureCount}/{_srtmFeatures.Count})";
 			}
 
 			string resultMessage = $"Download complete!\n\n" +
@@ -378,12 +436,26 @@ public partial class MainPage : ContentPage
 		}
 		finally
 		{
-			// Reset button state
+			// Reset UI state
 			DownloadButton.Text = "Download SRTM File";
 			DownloadButton.IsEnabled = true;
 			DownloadSpinner.IsVisible = false;
 			DownloadSpinner.IsRunning = false;
+			ProgressContainer.IsVisible = false;
+			DownloadProgressBar.Progress = 0;
 		}
+	}
+
+	private void UpdateDownloadProgress(int successCount, int failureCount, int totalFiles)
+	{
+		int completedFiles = successCount + failureCount;
+		double progress = (double)completedFiles / totalFiles;
+		
+		MainThread.BeginInvokeOnMainThread(() =>
+		{
+			DownloadProgressBar.Progress = progress;
+			ProgressLabel.Text = $"Downloading files... {completedFiles}/{totalFiles} ({(progress * 100):F1}%)";
+		});
 	}
 
 	private async void OnDownloadClicked(object sender, EventArgs e)
